@@ -1,6 +1,7 @@
 #ifndef DATASTORGE_H
 #define DATASTORGE_H
 
+#include <QThread>
 #include <QtSql/QSqlDatabase>
 #include <QSqlError>
 #include <QString>
@@ -10,13 +11,19 @@
 
 #include "piece.h"
 
-class DataStorge
+class DataStorge  : public QThread
 {
+    Q_OBJECT
+
 public:
     DataStorge();
     ~DataStorge();
 
+signals:
+    void endUpdateDB();
+
 public:
+    void updateDB();
     void insert(const int month, const int day, const int week, const std::vector<shape>& val);
     std::vector<shape> get(const int month, const int day, const int week);
     bool good();
@@ -31,6 +38,9 @@ public:
     shape fromBoardStr(const QString& val);
     shape str2Int(QString str);
 
+protected:
+    void run() override;
+
 private:
     const QString create_answer_sql = "create table if not exists answer (id int primary key, dt char(6) not null, method int, data char(56) not null)";
     const QString insert_answer_sql = "insert into answer(id, dt, method, data) values (:id, :dt, :method, :data)";
@@ -39,6 +49,8 @@ private:
     QSqlDatabase database;
     QSqlQuery query;
     int nRow_ = 0;
+    int m_, d_, w_;
+    std::vector<shape> curAnswer_;
     std::unordered_map<int, QChar> mapI2C_ = {
         {1, '1'},
         {2, '2'},

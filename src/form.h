@@ -44,6 +44,7 @@ private slots:
 
     bool getAnswerFromDB(const int month, const int day, const int week);
 
+    void handleUpdateDB();
 
 private:
     void logging(QString val);

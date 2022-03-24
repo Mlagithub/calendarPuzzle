@@ -1,4 +1,5 @@
 #include <QDebug>
+#include <QVariantList>
 
 
 #include "datastorge.h"
@@ -29,20 +30,40 @@ DataStorge::~DataStorge()
     database.close();
 }
 
-void DataStorge::insert(const int month, const int day, const int week, const std::vector<shape> &val)
+void DataStorge::updateDB()
 {
     query.prepare(insert_answer_sql);
 
-    auto dt = this->formatDateStr(month, day, week);
-    query.bindValue(":dt", dt);
+    auto dt = this->formatDateStr(m_, d_, w_);
+    QVariantList dateList, idList, methodList, dataList;
     int method = 0;
-    for(auto it : val)
+    for(auto it : curAnswer_)
     {
-        query.bindValue(":id", ++nRow_);
-        query.bindValue(":method", ++method);
-        query.bindValue(":data", this->formatBoardStr(it));
-        checkExec(QString("insert answer of %1-%2").arg(dt).arg(method));
+        dateList << dt;
+        idList << ++nRow_;
+        methodList << ++method;
+        dataList << this->formatBoardStr(it);
     }
+    query.bindValue(":dt", dateList);
+    query.bindValue(":id", idList);
+    query.bindValue(":method", methodList);
+    query.bindValue(":data", dataList);
+    if(query.execBatch())
+    {
+        emit endUpdateDB();
+    }
+    else
+    {
+        qDebug() << "Error to exec " << QString("insert answer of %1-%2-%3").arg(m_).arg(d_).arg(w_) << query.lastError();
+    }
+}
+
+void DataStorge::insert(const int month, const int day, const int week, const std::vector<shape> &val)
+{
+    m_ = month;
+    d_ = day;
+    w_ = week;
+    curAnswer_ = val;
 }
 
 std::vector<shape> DataStorge::get(const int month, const int day, const int week)
@@ -107,7 +128,7 @@ bool DataStorge::checkExec(QString str)
     }
     else
     {
-        qDebug() << "Successfully exec " << str;
+//        qDebug() << "Successfully exec " << str;
     }
     return true;
 }
@@ -144,4 +165,9 @@ shape DataStorge::fromBoardStr(const QString &str)
     }
 
     return rst;
+}
+
+void DataStorge::run()
+{
+    updateDB();
 }

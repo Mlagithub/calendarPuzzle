@@ -15,6 +15,7 @@ Form::Form(QWidget *parent) : QWidget(parent),
     connect(&puzzle_, &Puzzle::solveFinisthed, this, &Form::handleSolvedSignal);
     connect(&puzzle_, &Puzzle::solving, this, &Form::logging);
     connect(this, &Form::dateChanged, this, &Form::getAnswerFromDB);
+    connect(&db_, &DataStorge::endUpdateDB, this, &Form::handleUpdateDB);
 
     scene_ = new QGraphicsScene(this);
     ui->graphicsView->setScene(scene_);
@@ -150,9 +151,9 @@ void Form::handleSolvedSignal()
     auto pdt = puzzle_.date();
     result_ = puzzle_.result();
     db_.insert(pdt.month, pdt.day, pdt.week, result_);
-
-    this->showResult(1);
-    this->updateUI(State::SolveFinish);
+    if(db_.isRunning()) db_.wait();
+    db_.start();
+    ui->plainTextEdit_log->appendPlainText("Insert answer into database...");
 }
 
 bool Form::getAnswerFromDB(const int month, const int day, const int week)
@@ -172,4 +173,11 @@ bool Form::getAnswerFromDB(const int month, const int day, const int week)
     }
 
     return true;
+}
+
+void Form::handleUpdateDB()
+{
+    ui->plainTextEdit_log->appendPlainText("Insert answer finished");
+    this->showResult(1);
+    this->updateUI(State::SolveFinish);
 }
